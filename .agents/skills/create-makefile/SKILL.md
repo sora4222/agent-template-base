@@ -38,10 +38,13 @@ Follow rules for creating commands:
  - Do not duplicate commands, if required then make commands dependencies to make an alias
  - Commands by default should minimise output of scripts to reduce agent cost with a `--human` argument to display more for a more human readable output. This should be a minimal change to the script, do not add considerable changes unless instructed to
  - Use standard Makefile coding principles such as declaring `.PHONY`, using dependencies for a script, use patterning and any other Makefile "code foo" to allow the Makefile to better write the scripts
+ - Allow independent targets and scripts to run in parallel with `make -j`. The command lists below define coverage, not execution order. Order only commands with real dependencies or shared writable files, and keep that ordering scoped to the affected work.
  - Prefer writing Bash scripts, putting large scripts (more than 15 lines) in `scripts/` directory
  - Do not only make edits to the file for the current goal, refactor using Makefile techniques to create better commands and scripts.
  - Scripts must be written assuming the application is being run by multiple agents on a single computer in different worktrees, they need to not interact with each other, separate ports and containers need to be setup for this
- - Never expose information in the commands unless required, when you do so always give that information in your response.
+ - Never expose information in the commands or scripts called unless instructed in an original task to do so, when you do so always give that information in your response.
+ - Do not rely on `sudo` for scripts other than scripts output for a user deploying applications, privledged access should be avoided.
+ - Try to allow parallel and fast execution of scripts/commands, do not use NOPARALLEL unless required.
 
 ## Base commands/script
 
@@ -54,11 +57,11 @@ Term "application" refers to the software being developed and the components req
 `setup-env-worktree` - Create only if needed to copy environment files, docker volume, generate separate environment variables for each worktree upon creation of the worktree.
 `dev` - Developer usage only. Will run the application in development mode with changes to the software seen by the developer quickly (often referred to as watching), this command must start the application as a whole, any dependencies should also be started, on keyboard interrupt, the script should try to stop all parts of the application.
 `build` - Only declared when a part of the writable software needs to output compiled/built software. Create individual scripts that this script is dependendent on with name `build-<component>` that will build each individual part, component name should be the name of the directory containing the files or a suitable replacement. The main command moves outputs to a `build/<component>` directory at the root of the repository, clear existing directories before moving new output. Do not include this for software that does not need to be "built".
-`install-server` - Create to setup the application on a Unix server securely, preferably as a service that will start on the server. Store options given, or created, so repeat executions run with this information. Databases should use a restricted user to keep database tables secure, do not install baremetal dependencies through this script without permission.
+`install-server` - Create to setup the built application on a Unix server securely, preferably as a service that will start on the server. Store options given, or created, so repeat executions run with this information. Databases should use a restricted user to keep database tables secure, do not install baremetal dependencies through this script without permission.
 `uninstall-server` - Removes the application from a server, use options storage. Do not remove dependencies other applications may use without user approval
 `test` - Create to run all unit tests of the written software of the repository. Use dependencies to run more focussed test commands which can be called independently to test different aspects of a component when multple testing frameworks or approaches (unit and integratioin) are used, name `test-<component>(-<method>?)` e.g. `test-frontend-playwright`, or `test-backend`
 `dev-stop` - Only declare this when there are parts of the `dev` command that when the developer keyboard interrupts may require the developer to stop background threads, docker containers or other components to the application that would not have responded to the keyboard interrupt. The developer should be able to run `dev` and work with the application again.
-`check` - runs `format`, `lint`, `test` and `type-<component>`, for formatting, linting, all tests and static type checking
+`check` - runs `format`, `lint`, `test` and `type-<component>`, for formatting, linting, all tests and static type checking, the order listed is not a required order executed.
 `format` - runs all `format-<component>` scripts checking and automatically fixing any formatting issues found by the formater disclosed by the developer, ask if no formatter was disclosed.
 `lint` - runs all `lint-<component>` scripts, each script run all lint packages approved by the user, if none have been disclosed ask the developer, by default use the packages to fix all errors found.
 `reset-db` - Only create when the application relies on any database. Will allow developer to reset and reinitialise the database, rely on Alembic for initialisation.
@@ -68,4 +71,4 @@ Term "application" refers to the software being developed and the components req
 `commit-rules` - Optional, only when rules for commits have been specified.
 Each of these commands can have more dependencies to better target specific components of the application, an example `build-frontend` could build the frontend of the application.
 
-An `all` target should be setup, running `check`, `test`, `build`
+An `all` target should be setup, running `check`, `test`, `build`.
